@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -euo pipefail
+trap 'exit 1' INT
+
+BUILD=0
+IMAGE_NAME="localhost/claude-container_claude-auth-workspace"
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS] <directory>
+
+Launch a containerized Claude workspace in the given directory.
+
+Options:
+  -b, --build    Force a rebuild of the container image
+  -h, --help     Show this help message and exit
+EOF
+}
+
+# Parse arguments
+POSITIONAL_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -b|--build)
+      BUILD=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+set -- ${POSITIONAL_ARGS[@]+"${POSITIONAL_ARGS[@]}"}
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+RUN_DIR="$( cd "$(dirname "$( readlink "$0" || ls -1 "$0" )")" > /dev/null && pwd -P )"
+echo "RUN DIR: $RUN_DIR"
+
+WORKING_DIR=$( cd "$1" > /dev/null && pwd )
+cd "$WORKING_DIR" || exit 1
+
+if [[ $BUILD -eq 1 ]]; then
+  CONTEXT="$WORKING_DIR" CLAUDE_CONTAINER_DIR="$RUN_DIR" podman compose -f "$RUN_DIR/compose.yml" --in-pod false run --rm --build claude-auth-workspace
+else
+  CONTEXT="$WORKING_DIR" CLAUDE_CONTAINER_DIR="$RUN_DIR" podman compose -f "$RUN_DIR/compose.yml" --in-pod false run --rm claude-auth-workspace
+fi

@@ -1,0 +1,73 @@
+FROM node:20
+
+ARG CLAUDE_CODE_VERSION=latest
+
+# Install basic development tools and iptables/ipset
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  git \
+  procps \
+  sudo \
+  fzf \
+  zsh \
+  man-db \
+  unzip \
+  gnupg2 \
+  gh \
+  iptables \
+  iproute2 \
+  dnsutils \
+  aggregate \
+  jq \
+  build-essential \
+  python3 \
+  python3-pip \
+  python3-venv \ 
+  python3-dev \
+  octave \
+  r-base \
+  r-base-dev \
+  #vim \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Ensure default node user has access to /usr/local/share
+RUN mkdir -p /usr/local/share/npm-global && \
+  chown -R node:node /usr/local/share
+
+ARG USERNAME=node
+
+# Persist bash history.
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+  && mkdir /commandhistory \
+  && touch /commandhistory/.bash_history \
+  && chown -R $USERNAME /commandhistory
+
+# Set `DEVCONTAINER` environment variable to help with orientation
+ENV DEVCONTAINER=true
+
+# Create workspace and config directories and set permissions
+RUN mkdir -p /workspace /home/node/.claude && \
+  chown -R node:node /workspace /home/node/.claude
+
+WORKDIR /workspace
+
+# Set up non-root user
+USER node
+
+# Install global packages
+ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+ENV PATH=$PATH:/usr/local/share/npm-global/bin
+
+# Install Claude
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+
+ENV ANTHROPIC_BASE_URL=https://***.com
+
+# Provide your LiteLLM Master Key or Virtual Key
+ENV ANTHROPIC_AUTH_TOKEN="sk-****"
+
+# (Optional) Pre-select your startup model alias defined in config.yaml
+ENV ANTHROPIC_MODEL="claude-auto"
+ENV CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
+
+#CMD ["claude", "--dangerously-skip-permissions"]
+CMD "claude"
