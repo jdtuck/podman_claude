@@ -33,6 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /usr/local/share/npm-global && \
   chown -R node:node /usr/local/share
 
+RUN R -e "install.packages(c('testhat', 'tidyverse', 'devtools', 'usethis', 'roxygen2'))"
+
 ARG USERNAME=node
 
 # Persist bash history.
